@@ -1,0 +1,1311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Digital Literacy Hub - Interactive Preview</title>
+  
+  <!-- Font setup -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- React & Babel CDNs -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  
+  <!-- Canvas Confetti CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            border: "hsl(var(--border))",
+            background: "hsl(var(--background))",
+            foreground: "hsl(var(--foreground))",
+            primary: {
+              DEFAULT: "hsl(var(--primary))",
+              foreground: "hsl(var(--primary-foreground))"
+            },
+            card: {
+              DEFAULT: "hsl(var(--card))",
+              foreground: "hsl(var(--card-foreground))"
+            }
+          },
+          fontFamily: {
+            sans: ["Outfit", "Inter", "sans-serif"]
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    :root {
+      --background: 240 10% 99%;
+      --foreground: 224 71.4% 4.1%;
+      --card: 0 0% 100%;
+      --card-foreground: 224 71.4% 4.1%;
+      --primary: 262.1 83.3% 57.8%;
+      --primary-foreground: 210 20% 98%;
+      --border: 220 13% 91%;
+      --radius: 0.75rem;
+    }
+
+    .dark {
+      --background: 224 71.4% 4.1%;
+      --foreground: 210 20% 98%;
+      --card: 224 71.4% 6%;
+      --card-foreground: 210 20% 98%;
+      --primary: 263.4 70% 50.4%;
+      --primary-foreground: 210 20% 98%;
+      --border: 215 27.9% 16.9%;
+    }
+
+    body {
+      background-color: hsl(var(--background));
+      color: hsl(var(--foreground));
+      font-family: 'Outfit', sans-serif;
+      transition: background-color 0.3s ease, color 0.3s ease;
+    }
+
+    .glass {
+      background: rgba(255, 255, 255, 0.45);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+    }
+
+    .dark .glass {
+      background: rgba(15, 17, 23, 0.65);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .animate-float {
+      animation: float 2.5s infinite ease-in-out;
+    }
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-5px); }
+    }
+
+    .animate-pulse-slow {
+      animation: pulse 3s infinite ease-in-out;
+    }
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.02); }
+    }
+
+    /* Print styles */
+    @media print {
+      body * {
+        visibility: hidden;
+      }
+      #certificate-print-area, #certificate-print-area * {
+        visibility: visible;
+      }
+      #certificate-print-area {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        border: 12px double #6d28d9 !important;
+        padding: 40px !important;
+      }
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+  <div id="root"></div>
+
+  <!-- React code with Babel compiler -->
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    // ---------------- 1. SVGs Icon Components ----------------
+    function ShieldCheckIcon({ className = "h-6 w-6" }) {
+      return (
+        <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+          <path d="m9 12 2 2 4-4" />
+        </svg>
+      );
+    }
+
+    function BookOpenIcon({ className = "h-5 w-5" }) {
+      return (
+        <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+          <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+        </svg>
+      );
+    }
+
+    function SmartphoneIcon({ className = "h-6 w-6" }) {
+      return (
+        <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect width="14" height="20" x="5" y="2" rx="2" ry="2" />
+          <path d="M12 18h.01" />
+        </svg>
+      );
+    }
+
+    function GlobeIcon({ className = "h-6 w-6" }) {
+      return (
+        <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="10" />
+          <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" />
+          <path d="M2 12h20" />
+        </svg>
+      );
+    }
+
+    function CreditCardIcon({ className = "h-6 w-6" }) {
+      return (
+        <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect width="20" height="14" x="2" y="5" rx="2" />
+          <line x1="2" x2="22" y1="10" y2="10" />
+        </svg>
+      );
+    }
+
+    function FileTextIcon({ className = "h-6 w-6" }) {
+      return (
+        <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
+          <path d="M14 2v4a2 2 0 0 0 2 2h4" />
+          <path d="M10 9H8" />
+          <path d="M16 13H8" />
+          <path d="M16 17H8" />
+        </svg>
+      );
+    }
+
+    function ShieldAlertIcon({ className = "h-6 w-6" }) {
+      return (
+        <svg className={className} xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+          <line x1="12" x2="12" y1="8" y2="12" />
+          <line x1="12" x2="12.01" y1="16" y2="16" />
+        </svg>
+      );
+    }
+
+    // ---------------- 2. Language Translation ----------------
+    const translations = {
+      en: {
+        navHome: "Home",
+        navCourses: "Learning Modules",
+        navSimulator: "Safety Simulator",
+        navDashboard: "My Dashboard",
+        navImpact: "Community Impact",
+        navAdmin: "Admin Panel",
+        welcome: "Welcome back",
+        logout: "Logout",
+        language: "Language",
+        signIn: "Sign In",
+        signUp: "Sign Up",
+        streak: "Learning Streak",
+        passRate: "Quiz Pass Rate",
+        certificates: "Certificates",
+        trained: "People Trained",
+        completed: "Completed Modules",
+        heroTitle: "Learn Digital Skills. Stay Safe Online.",
+        heroSubtitle: "A professional learning platform designed to help rural citizens, seniors, students, and new smartphone users master technology and secure payments.",
+        ctaStart: "Start Learning Now",
+        ctaSimulator: "Try Safety Simulator",
+        quickAccess: "Quick Access for Testing",
+        tName: "Full Name",
+        tEmail: "Email Address",
+        tPass: "Password",
+        tLang: "Preferred Language",
+        tRole: "Role",
+        tRegister: "Create Account",
+        tLogin: "Sign In",
+        askAI: "Ask a digital skill question...",
+        quickQuestions: "Quick Questions:",
+        loading: "Loading..."
+      },
+      ta: {
+        navHome: "முகப்பு",
+        navCourses: "கற்றல் தொகுதிகள்",
+        navSimulator: "பாதுகாப்பு சிமுலேட்டர்",
+        navDashboard: "எனது டாஷ்போர்டு",
+        navImpact: "சமூக தாக்கம்",
+        navAdmin: "நிர்வாகம்",
+        welcome: "மீண்டும் வருக",
+        logout: "வெளியேறு",
+        language: "மொழி",
+        signIn: "உள்நுழைக",
+        signUp: "பதிவு செய்க",
+        streak: "கற்றல் தொடர்ச்சி",
+        passRate: "தேர்ச்சி விகிதம்",
+        certificates: "சான்றிதழ்கள்",
+        trained: "பயிற்சி பெற்றோர்",
+        completed: "முடிக்கப்பட்டவை",
+        heroTitle: "டிஜிட்டல் திறன்களைக் கற்கலாம். பாதுகாப்பாக இருக்கலாம்.",
+        heroSubtitle: "கிராமப்புற மக்கள், முதியவர்கள், மற்றும் புதிய ஸ்மார்ட்போன் பயனர்கள் தொழில்நுட்பம் மற்றும் கட்டணங்களை மாஸ்டர் செய்ய உதவும் தளம்.",
+        ctaStart: "இப்போதே கற்கத் தொடங்குங்கள்",
+        ctaSimulator: "பாதுகாப்பை சோதிக்கவும்",
+        quickAccess: "விரைவு சோதனை கணக்குகள்",
+        tName: "முழு பெயர்",
+        tEmail: "மின்னஞ்சல் முகவரி",
+        tPass: "கடவுச்சொல்",
+        tLang: "விருப்பமான மொழி",
+        tRole: "வகை",
+        tRegister: "கணக்கை உருவாக்கு",
+        tLogin: "உள்நுழைக",
+        askAI: "கேள்வி கேட்கவும்...",
+        quickQuestions: "விரைவான கேள்விகள்:",
+        loading: "ஏற்றப்படுகிறது..."
+      }
+    };
+
+    // ---------------- 3. Main Controller Application ----------------
+    function App() {
+      const [lang, setLang] = useState(localStorage.getItem('dlh_lang') || 'en');
+      const [theme, setTheme] = useState(localStorage.getItem('dlh_theme') || 'light');
+      const [user, setUser] = useState(JSON.parse(localStorage.getItem('dlh_user')) || null);
+      const [view, setView] = useState('#/');
+      const [modulesProgress, setModulesProgress] = useState(
+        JSON.parse(localStorage.getItem('dlh_preview_progress')) || { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }
+      );
+
+      useEffect(() => {
+        localStorage.setItem('dlh_lang', lang);
+      }, [lang]);
+
+      useEffect(() => {
+        const root = document.documentElement;
+        if (theme === 'dark') {
+          root.classList.add('dark');
+        } else {
+          root.classList.remove('dark');
+        }
+        localStorage.setItem('dlh_theme', theme);
+      }, [theme]);
+
+      const t = (key) => translations[lang][key] || translations['en'][key] || key;
+
+      const handleLogin = (mockEmail, mockPass) => {
+        let loggedUser = null;
+        if (mockEmail === 'admin@dlh.org') {
+          loggedUser = { username: "Admin Staff", email: "admin@dlh.org", role: "admin", streak_count: 7 };
+        } else {
+          loggedUser = { username: "Ravi Kumar", email: "citizen@dlh.org", role: "user", streak_count: 4 };
+        }
+        setUser(loggedUser);
+        localStorage.setItem('dlh_user', JSON.stringify(loggedUser));
+        setView('#/dashboard');
+      };
+
+      const handleLogout = () => {
+        setUser(null);
+        localStorage.removeItem('dlh_user');
+        setView('#/');
+      };
+
+      const updateProgress = (moduleId, percentage) => {
+        const updated = { ...modulesProgress, [moduleId]: Math.max(modulesProgress[moduleId] || 0, percentage) };
+        setModulesProgress(updated);
+        localStorage.setItem('dlh_preview_progress', JSON.stringify(updated));
+      };
+
+      return (
+        <div className="flex flex-col min-h-screen transition-colors duration-300 bg-background text-foreground">
+          {/* Header Navigation */}
+          <header className="sticky top-0 z-40 w-full glass border-b border-border shadow-sm">
+            <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+              <div className="flex items-center gap-2 cursor-pointer font-extrabold text-xl bg-gradient-to-r from-violet-600 to-indigo-500 bg-clip-text text-transparent" onClick={() => setView('#/')}>
+                <ShieldCheckIcon className="h-6 w-6 text-violet-600" />
+                {lang === 'ta' ? "டிஜிட்டல் அறிவு மையம்" : "Digital Literacy Hub"}
+              </div>
+
+              {/* Navigation Items */}
+              <div className="hidden md:flex items-center space-x-1">
+                <button onClick={() => setView('#/')} className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-all ${view === '#/' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'}`}>{t('navHome')}</button>
+                {user && <button onClick={() => setView('#/courses')} className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-all ${view === '#/courses' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'}`}>{t('navCourses')}</button>}
+                {user && <button onClick={() => setView('#/simulator')} className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-all ${view === '#/simulator' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'}`}>{t('navSimulator')}</button>}
+                {user && <button onClick={() => setView('#/dashboard')} className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-all ${view === '#/dashboard' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'}`}>{t('navDashboard')}</button>}
+                <button onClick={() => setView('#/impact')} className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-all ${view === '#/impact' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'}`}>{t('navImpact')}</button>
+                {user && user.role === 'admin' && <button onClick={() => setView('#/admin')} className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-all ${view === '#/admin' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'}`}>{t('navAdmin')}</button>}
+              </div>
+
+              {/* Utility switches */}
+              <div className="flex items-center space-x-3">
+                <button onClick={() => setLang(prev => prev === 'en' ? 'ta' : 'en')} className="p-2 rounded-full hover:bg-muted text-xs font-black uppercase text-primary border border-border">
+                  {lang === 'en' ? 'தமிழ்' : 'EN'}
+                </button>
+                <button onClick={() => setTheme(prev => prev === 'light' ? 'dark' : 'light')} className="p-2 rounded-full hover:bg-muted text-foreground">
+                  {theme === 'light' ? '🌙' : '☀️'}
+                </button>
+
+                {user ? (
+                  <button onClick={handleLogout} className="bg-red-500/10 hover:bg-red-500 text-red-500 hover:text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all">
+                    {t('logout')}
+                  </button>
+                ) : (
+                  <button onClick={() => setView('#/login')} className="bg-primary text-primary-foreground hover:bg-primary/90 px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm">
+                    {t('signIn')}
+                  </button>
+                )}
+              </div>
+            </div>
+          </header>
+
+          {/* Main Content Area */}
+          <main className="flex-grow max-w-7xl mx-auto px-4 py-8 w-full">
+            {view === '#/' && <HomeView setView={setView} t={t} />}
+            {view === '#/login' && <LoginView setView={setView} handleLogin={handleLogin} t={t} />}
+            {view === '#/courses' && <CoursesView setView={setView} progress={modulesProgress} updateProgress={updateProgress} lang={lang} t={t} />}
+            {view === '#/simulator' && <SimulatorView setView={setView} lang={lang} t={t} />}
+            {view === '#/dashboard' && <DashboardView setView={setView} user={user} progress={modulesProgress} lang={lang} t={t} />}
+            {view === '#/impact' && <ImpactView progress={modulesProgress} lang={lang} t={t} />}
+            {view === '#/admin' && <AdminView users={[]} setView={setView} t={t} />}
+          </main>
+
+          {/* Footer */}
+          <footer className="bg-card border-t border-border mt-auto py-8">
+            <div className="max-w-7xl mx-auto px-4 flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-muted-foreground">
+              <p>© 2026 Digital Literacy Hub. Supporting Rural and Senior Citizen Development.</p>
+              <div className="flex gap-4">
+                <span>Accessibility WCAG 2.1 Compliant</span>
+                <span>Tamil / English Supported</span>
+              </div>
+            </div>
+          </footer>
+
+          {/* Floating AI Helper */}
+          {user && <AIChatbotWidget lang={lang} t={t} />}
+        </div>
+      );
+    }
+
+    // ---------------- 4. Home Page ----------------
+    function HomeView({ setView, t }) {
+      return (
+        <div className="space-y-16 py-8 relative">
+          <div className="text-center space-y-6 max-w-3xl mx-auto">
+            <span className="bg-primary/10 text-primary border border-primary/20 text-xs font-bold uppercase tracking-wider px-3.5 py-1.5 rounded-full inline-block">
+              ★ Bridging the Digital Divide
+            </span>
+            <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight bg-gradient-to-r from-foreground via-primary to-indigo-600 bg-clip-text text-transparent leading-tight">
+              {t('heroTitle')}
+            </h1>
+            <p className="text-muted-foreground text-lg sm:text-xl leading-relaxed">
+              {t('heroSubtitle')}
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
+              <button onClick={() => setView('#/courses')} className="bg-primary text-primary-foreground hover:bg-primary/95 text-base font-bold px-8 py-4 rounded-2xl shadow-lg transition-all transform hover:-translate-y-0.5">
+                {t('ctaStart')} →
+              </button>
+              <button onClick={() => setView('#/simulator')} className="bg-card border border-border text-foreground hover:bg-muted/40 text-base font-semibold px-8 py-4 rounded-2xl transition-all transform hover:-translate-y-0.5">
+                {t('ctaSimulator')}
+              </button>
+            </div>
+          </div>
+
+          {/* Statistics grid */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-8">
+            <div className="bg-card border border-border/80 rounded-2xl p-6 shadow-sm text-center space-y-2 relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-indigo-500"></div>
+              <h3 className="text-3xl font-black">24,500+</h3>
+              <p className="font-bold text-sm text-foreground">{t('trained')}</p>
+              <p className="text-xs text-muted-foreground">Across rural villages and local panchayats</p>
+            </div>
+            <div className="bg-card border border-border/80 rounded-2xl p-6 shadow-sm text-center space-y-2 relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-500 to-pink-500"></div>
+              <h3 className="text-3xl font-black">62,000+</h3>
+              <p className="font-bold text-sm text-foreground">{t('completed')}</p>
+              <p className="text-xs text-muted-foreground">Bite-sized visual lessons finished</p>
+            </div>
+            <div className="bg-card border border-border/80 rounded-2xl p-6 shadow-sm text-center space-y-2 relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 to-teal-500"></div>
+              <h3 className="text-3xl font-black">84.5%</h3>
+              <p className="font-bold text-sm text-foreground">{t('passRate')}</p>
+              <p className="text-xs text-muted-foreground">Average safety awareness competency</p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ---------------- 5. Login View ----------------
+    function LoginView({ setView, handleLogin, t }) {
+      const [email, setEmail] = useState('');
+      const [password, setPassword] = useState('');
+
+      const onSubmit = (e) => {
+        e.preventDefault();
+        handleLogin(email, password);
+      };
+
+      return (
+        <div className="max-w-md w-full mx-auto bg-card border border-border rounded-2xl shadow-xl p-8 my-10">
+          <h2 className="text-2xl font-black text-center mb-6">{t('tLogin')}</h2>
+          <form onSubmit={onSubmit} className="space-y-4">
+            <div>
+              <label className="block text-xs font-bold uppercase text-muted-foreground mb-1">{t('tEmail')}</label>
+              <input type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="citizen@dlh.org" className="w-full bg-muted/40 border border-border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-primary text-foreground" />
+            </div>
+            <div>
+              <label className="block text-xs font-bold uppercase text-muted-foreground mb-1">{t('tPass')}</label>
+              <input type="password" required value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" className="w-full bg-muted/40 border border-border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-primary text-foreground" />
+            </div>
+            <button type="submit" className="w-full bg-primary text-primary-foreground font-bold py-3 rounded-xl hover:bg-primary/95 transition-all shadow-md mt-6">
+              {t('tLogin')}
+            </button>
+          </form>
+
+          <div className="mt-8 pt-6 border-t border-border space-y-3">
+            <p className="text-xs font-bold text-muted-foreground text-center uppercase tracking-widest">{t('quickAccess')}</p>
+            <div className="grid grid-cols-2 gap-2">
+              <button onClick={() => handleLogin('citizen@dlh.org', 'citizen123')} className="bg-muted hover:bg-muted/80 text-xs font-bold py-2 px-3 rounded-lg border border-border transition-colors">
+                Citizen (User)
+              </button>
+              <button onClick={() => handleLogin('admin@dlh.org', 'admin123')} className="bg-primary/5 hover:bg-primary/10 border border-primary/20 text-primary text-xs font-bold py-2 px-3 rounded-lg transition-colors">
+                Admin Panel
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ---------------- 6. Learning Modules View ----------------
+    function CoursesView({ setView, progress, updateProgress, lang, t }) {
+      const [selectedModule, setSelectedModule] = useState(null);
+      const [activeTopicIdx, setActiveTopicIdx] = useState(0);
+
+      const modules = [
+        {
+          id: 1,
+          title: lang === 'ta' ? "ஸ்மார்ட்போன் அடிப்படைகள்" : "Smartphone Basics",
+          icon: SmartphoneIcon,
+          topics: [
+            {
+              title: lang === 'ta' ? "அழைப்புகள் மேற்கொள்வது" : "Making Phone Calls",
+              content: lang === 'ta' 
+                ? "தொலைபேசி அழைப்பு செய்ய:\n1. பச்சை நிற Phone ஐகானைத் தட்டவும்.\n2. கீபேடில் எண் தட்டவும்.\n3. பச்சை நிற கால் பட்டனை அழுத்தவும்.\n4. உரையாடல் முடிந்ததும் சிவப்பு எண்ட் பட்டனை அழுத்தவும்." 
+                : "To make a phone call:\n1. Tap the green Phone icon.\n2. Dial the 10-digit number on the keypad.\n3. Tap the green Call button to dial.\n4. Tap the red button to hang up.",
+              simulator: 'phone'
+            },
+            {
+              title: lang === 'ta' ? "தொடர்புகளைச் சேமிப்பது" : "Saving Contacts",
+              content: lang === 'ta' 
+                ? "மொபைல் எண்களைச் சேமிக்க:\n1. Contacts செயலிக்குச் சென்று '+' தட்டவும்.\n2. பெயர் மற்றும் மொபைல் எண்ணை தட்டவும்.\n3. 'Save' என்பதை அழுத்தவும்." 
+                : "To save contacts:\n1. Open Contacts and click '+'.\n2. Type the name and mobile number.\n3. Press 'Save'.",
+              simulator: 'contact'
+            },
+            {
+              title: lang === 'ta' ? "வாட்ஸ்அப் அறிமுகம்" : "Using WhatsApp Chat",
+              content: lang === 'ta' 
+                ? "செய்தி அனுப்ப:\n1. WhatsApp-ஐத் திறக்கவும்.\n2. சேட் குறியீட்டைத் தட்டி ஒரு நண்பரைத் தேர்ந்தெடுக்கவும்.\n3. மெசேஜ் பாக்ஸில் தட்டச்சு செய்து அனுப்பவும்." 
+                : "To message:\n1. Open WhatsApp.\n2. Select a contact chat.\n3. Type message and hit green arrow.",
+              simulator: 'whatsapp'
+            }
+          ]
+        },
+        {
+          id: 3,
+          title: lang === 'ta' ? "டிஜிட்டல் கட்டணங்கள்" : "Digital Payments",
+          icon: CreditCardIcon,
+          topics: [
+            {
+              title: lang === 'ta' ? "UPI PIN மற்றும் QR கோடுகள்" : "UPI PIN & QR Payments",
+              content: lang === 'ta'
+                ? "QR ஸ்கேன் செய்ய:\n1. GPay அல்லது PhonePe-ஐத் திறக்கவும்.\n2. Scan QR பொத்தானைத் தட்டவும்.\n3. தொகையை உள்ளிட்டு உங்களது ரகசிய UPI PIN-ஐ உள்ளிடவும்."
+                : "To pay via QR code:\n1. Open your payment app (Google Pay, PhonePe).\n2. Tap 'Scan QR' and frame the code.\n3. Enter amount and type your secure UPI PIN.",
+              simulator: 'upi'
+            }
+          ]
+        }
+      ];
+
+      const handleSelect = (m) => {
+        setSelectedModule(m);
+        setActiveTopicIdx(0);
+      };
+
+      const handleCompleteStep = () => {
+        const stepsCount = selectedModule.topics.length;
+        const currentPercentage = Math.round(((activeTopicIdx + 1) / stepsCount) * 100);
+        updateProgress(selectedModule.id, currentPercentage);
+
+        if (activeTopicIdx < stepsCount - 1) {
+          setActiveTopicIdx(prev => prev + 1);
+        } else {
+          // Finished all
+          alert(lang === 'ta' ? "வாழ்த்துகள்! இந்தத் தொகுதியை முடித்துவிட்டீர்கள். இப்போது தேர்வு எழுதவும்." : "Congratulations! You completed the module. Take the quiz now.");
+          setView('#/dashboard');
+        }
+      };
+
+      return (
+        <div className="space-y-6">
+          {!selectedModule ? (
+            <div>
+              <h2 className="text-3xl font-extrabold mb-8 text-center md:text-left">{t('navCourses')}</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {modules.map((m) => {
+                  const Icon = m.icon;
+                  const prog = progress[m.id] || 0;
+                  return (
+                    <div key={m.id} className="bg-card border border-border rounded-2xl p-6 shadow-sm flex flex-col justify-between">
+                      <div className="space-y-4">
+                        <div className="p-3.5 bg-primary/10 text-primary w-fit rounded-xl">
+                          <Icon className="h-6 w-6" />
+                        </div>
+                        <h3 className="text-xl font-bold">{m.title}</h3>
+                        <div>
+                          <div className="flex justify-between text-xs font-semibold mb-1 text-muted-foreground">
+                            <span>Progress</span>
+                            <span>{prog}%</span>
+                          </div>
+                          <div className="w-full bg-muted h-2 rounded-full overflow-hidden">
+                            <div className="bg-primary h-full transition-all duration-300" style={{ width: `${prog}%` }}></div>
+                          </div>
+                        </div>
+                      </div>
+                      <button onClick={() => handleSelect(m)} className="bg-secondary text-secondary-foreground hover:bg-primary hover:text-primary-foreground font-bold py-3.5 rounded-xl transition-all mt-6">
+                        Start Learning
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : (
+            // Topics walkthrough
+            <div>
+              <button onClick={() => setSelectedModule(null)} className="mb-6 border border-border bg-card px-4 py-2 rounded-xl text-sm font-semibold hover:bg-muted flex items-center gap-1">
+                ← Back
+              </button>
+
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                <div className="lg:col-span-6 bg-card border border-border rounded-2xl p-6 shadow-sm space-y-4">
+                  <span className="text-xs uppercase font-extrabold tracking-widest text-primary">Step {activeTopicIdx + 1} of {selectedModule.topics.length}</span>
+                  <h3 className="text-2xl font-black">{selectedModule.topics[activeTopicIdx].title}</h3>
+                  <p className="bg-muted/40 border border-border/40 p-4 rounded-xl text-sm leading-relaxed whitespace-pre-line text-foreground readable-text-lg">
+                    {selectedModule.topics[activeTopicIdx].content}
+                  </p>
+
+                  <div className="flex justify-between pt-4 border-t border-border">
+                    <button disabled={activeTopicIdx === 0} onClick={() => setActiveTopicIdx(prev => prev - 1)} className="px-4 py-2 border rounded-lg disabled:opacity-40">Previous</button>
+                    <button disabled={activeTopicIdx === selectedModule.topics.length - 1} onClick={() => setActiveTopicIdx(prev => prev + 1)} className="px-4 py-2 border rounded-lg disabled:opacity-40">Next</button>
+                  </div>
+                </div>
+
+                <div className="lg:col-span-6 h-[460px]">
+                  <MiniSimulator type={selectedModule.topics[activeTopicIdx].simulator} onComplete={handleCompleteStep} lang={lang} />
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // ---------------- 7. Mini Device Simulators ----------------
+    function MiniSimulator({ type, onComplete, lang }) {
+      const [dialNum, setDialNum] = useState('');
+      const [calling, setCalling] = useState(false);
+      const [pin, setPin] = useState('');
+      const [paying, setPaying] = useState(false);
+      const [whatsAppText, setWhatsAppText] = useState('');
+      const [chats, setChats] = useState([{ sender: 'them', text: "Hello, call me when you have time." }]);
+
+      const pressNum = (num) => {
+        if (dialNum.length < 10) setDialNum(prev => prev + num);
+      };
+
+      const handleCall = () => {
+        if (dialNum.length === 10) {
+          setCalling(true);
+          setTimeout(() => {
+            setCalling(false);
+            setDialNum('');
+            onComplete();
+          }, 2500);
+        } else {
+          alert("Enter a 10 digit number.");
+        }
+      };
+
+      const handlePay = () => {
+        if (pin.length === 4) {
+          setPaying(true);
+          setTimeout(() => {
+            setPaying(false);
+            setPin('');
+            confetti({ particleCount: 80, spread: 60 });
+            onComplete();
+          }, 2000);
+        }
+      };
+
+      const handleWhatsAppSend = () => {
+        if (!whatsAppText.trim()) return;
+        setChats(prev => [...prev, { sender: 'me', text: whatsAppText }]);
+        setWhatsAppText('');
+        setTimeout(() => {
+          setChats(prev => [...prev, { sender: 'them', text: "Excellent message sent!" }]);
+          setTimeout(() => onComplete(), 1500);
+        }, 1000);
+      };
+
+      if (type === 'phone') {
+        return (
+          <div className="bg-slate-950 w-72 mx-auto rounded-[32px] border-8 border-slate-800 p-4 h-full flex flex-col justify-between text-white shadow-xl">
+            {calling ? (
+              <div className="flex flex-col items-center justify-center h-full space-y-6">
+                <div className="w-16 h-16 bg-emerald-500 rounded-full flex items-center justify-center animate-pulse">📞</div>
+                <h4 className="text-lg font-bold">{dialNum}</h4>
+                <p className="text-xs text-slate-400">Calling...</p>
+              </div>
+            ) : (
+              <>
+                <div className="bg-slate-900 border border-slate-800 rounded-xl p-2.5 h-12 flex items-center justify-end font-bold text-xl">{dialNum || "Dial..."}</div>
+                <div className="grid grid-cols-3 gap-1.5 my-2">
+                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, "C", 0, "📞"].map((btn) => (
+                    <button
+                      key={btn}
+                      onClick={() => {
+                        if (btn === "C") setDialNum('');
+                        else if (btn === "📞") handleCall();
+                        else pressNum(btn);
+                      }}
+                      className={`font-semibold p-2.5 rounded-full flex items-center justify-center text-sm ${btn === "📞" ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-slate-800 hover:bg-slate-700'}`}
+                    >
+                      {btn}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        );
+      }
+
+      if (type === 'upi') {
+        return (
+          <div className="bg-slate-950 w-72 mx-auto rounded-[32px] border-8 border-slate-800 p-4 h-full flex flex-col justify-between text-white shadow-xl">
+            <div>
+              <div className="text-center border-b border-slate-800 pb-2 mb-4">
+                <h4 className="font-bold text-sm text-slate-300">UPI Secure PIN</h4>
+                <p className="text-[10px] text-slate-400 mt-0.5">Paying Shopkeeper: Rs. 250</p>
+              </div>
+              <div className="flex justify-center gap-2 my-4">
+                {[...Array(4)].map((_, i) => (
+                  <div key={i} className={`w-8 h-8 border-2 rounded-lg flex items-center justify-center ${pin.length > i ? 'border-primary' : 'border-slate-800'}`}>
+                    {pin.length > i ? "•" : ""}
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-3 gap-1.5">
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9, "Clear", 0, "Pay"].map(btn => (
+                <button
+                  key={btn}
+                  onClick={() => {
+                    if (btn === "Clear") setPin('');
+                    else if (btn === "Pay") handlePay();
+                    else if (pin.length < 4) setPin(prev => prev + btn);
+                  }}
+                  className={`font-bold p-2.5 rounded-xl text-xs ${btn === "Pay" ? 'bg-emerald-500' : 'bg-slate-800'}`}
+                >
+                  {btn}
+                </button>
+              ))}
+            </div>
+            {paying && <p className="text-xs text-center text-amber-500 animate-pulse mt-2">Processing Payment...</p>}
+          </div>
+        );
+      }
+
+      if (type === 'whatsapp') {
+        return (
+          <div className="bg-slate-900 w-72 mx-auto rounded-[32px] border-8 border-slate-800 h-full flex flex-col justify-between text-white shadow-xl overflow-hidden">
+            <div className="bg-[#075E54] p-3 text-xs font-bold flex items-center gap-2">
+              <div className="w-6 h-6 rounded-full bg-slate-700"></div>
+              <span>WhatsApp Chat</span>
+            </div>
+            <div className="flex-grow p-3 space-y-2 overflow-y-auto bg-slate-950">
+              {chats.map((c, i) => (
+                <div key={i} className={`flex ${c.sender === 'me' ? 'justify-end' : 'justify-start'}`}>
+                  <div className={`p-2 rounded-lg text-xs ${c.sender === 'me' ? 'bg-[#DCF8C6] text-black' : 'bg-slate-800 text-white'}`}>{c.text}</div>
+                </div>
+              ))}
+            </div>
+            <div className="p-2 bg-slate-950 flex gap-2">
+              <input type="text" value={whatsAppText} onChange={e => setWhatsAppText(e.target.value)} placeholder="Type msg..." className="flex-grow bg-slate-900 border border-slate-800 rounded-full px-3 py-1.5 text-xs focus:outline-none" />
+              <button onClick={handleWhatsAppSend} className="bg-[#128C7E] px-3 py-1 rounded-full text-xs">Send</button>
+            </div>
+          </div>
+        );
+      }
+
+      return (
+        <div className="bg-card border border-border rounded-2xl p-8 text-center flex flex-col justify-center items-center h-full">
+          <h4 className="font-bold mb-2">Topic Reading Completed</h4>
+          <p className="text-xs text-muted-foreground mb-6">Confirm and complete this learning path step.</p>
+          <button onClick={onComplete} className="bg-primary text-primary-foreground font-bold px-6 py-3 rounded-xl">Confirm Step</button>
+        </div>
+      );
+    }
+
+    // ---------------- 8. Cyber Safety Simulator ----------------
+    function SimulatorView({ setView, lang, t }) {
+      const [idx, setIdx] = useState(0);
+      const [evaluated, setEvaluated] = useState(false);
+      const [choice, setChoice] = useState(null);
+      const [score, setScore] = useState(0);
+      const [clues, setClues] = useState(false);
+
+      const scenarios = [
+        {
+          title: lang === 'ta' ? "பரிசு வென்ற SMS" : "Lottery Win SMS",
+          content: lang === 'ta' 
+            ? "வாழ்த்துகள்! நீங்கள் ரூ. 10 லட்சம் பரிசுப் போட்டியில் வென்றுள்ளீர்கள். உங்கள் பரிசை உடனடியாகப் பெற இந்த இணைப்பைக் கிளிக் செய்க: http://win-lott-secure.in/claim" 
+            : "CONGRATULATIONS! You have won a cash lottery of Rs. 10 Lakhs. Click this link: http://win-lott-secure.in/claim to claim your prize immediately!",
+          is_safe: false,
+          clues: ["Incorrect bank domain URL", "High urgency threat", "Unexpected cash promise"],
+          explanation: "Official banks never send lottery claims via SMS with links. Clicking them leads to phishing traps."
+        },
+        {
+          title: lang === 'ta' ? "வங்கி கணக்கு முடக்கம் எச்சரிக்கை" : "Urgent Bank Account Suspension",
+          content: lang === 'ta'
+            ? "மதிப்பிற்குரிய வாடிக்கையாளரே, உங்கள் வங்கியின் பாதுகாப்பான பயன்பாட்டில் சந்தேகத்திற்கிடமான செயல்பாடுகள் கண்டறியப்பட்டுள்ளன. 24 மணி நேரத்திற்குள் http://hdlf-bank-kyc-status.net இல் உங்கள் KYC விவரங்களை புதுப்பிக்கவும்."
+            : "Dear Customer, Your bank account has been flagged for suspicious activities. To prevent permanent suspension, update your KYC details within 24 hours at http://hdlf-bank-kyc-status.net.",
+          is_safe: false,
+          clues: ["Look at the sender domain name.", "Suspension threat creates fear.", "Generic greeting ('Dear Customer')"],
+          explanation: "Banks never request sensitive details or updates through links in emails. If urgent, visit the bank branch or official app."
+        }
+      ];
+
+      const handleChoice = (ans) => {
+        setChoice(ans);
+        setEvaluated(true);
+        if (ans === scenarios[idx].is_safe) setScore(prev => prev + 1);
+      };
+
+      const handleNext = () => {
+        setChoice(null);
+        setEvaluated(false);
+        setClues(false);
+        if (idx < scenarios.length - 1) {
+          setIdx(prev => prev + 1);
+        } else {
+          alert(`Simulator complete! Final score: ${score} / ${scenarios.length}`);
+          setView('#/dashboard');
+        }
+      };
+
+      return (
+        <div className="max-w-xl mx-auto space-y-6">
+          <div className="text-center">
+            <h2 className="text-3xl font-black">{t('navSimulator')}</h2>
+            <p className="text-sm text-muted-foreground mt-2">Identify safe vs unsafe online scenarios</p>
+          </div>
+
+          <div className="bg-card border border-border rounded-2xl p-6 shadow-md space-y-4">
+            <div className="flex justify-between text-xs font-bold text-muted-foreground uppercase border-b border-border pb-2">
+              <span>Scenario {idx + 1} of {scenarios.length}</span>
+              <span className="text-emerald-500">Score: {score}</span>
+            </div>
+            
+            <h3 className="font-extrabold text-lg text-foreground">{scenarios[idx].title}</h3>
+            
+            <div className="bg-slate-950 text-white font-mono p-4 rounded-xl border border-slate-800 text-xs min-h-[100px] flex items-center select-none leading-relaxed">
+              {scenarios[idx].content}
+            </div>
+
+            {!evaluated ? (
+              <div className="grid grid-cols-2 gap-4">
+                <button onClick={() => handleChoice(true)} className="bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3.5 rounded-xl shadow-md">Safe</button>
+                <button onClick={() => handleChoice(false)} className="bg-red-500 hover:bg-red-600 text-white font-bold py-3.5 rounded-xl shadow-md">Scam / Unsafe</button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className={`p-4 rounded-xl border text-sm font-bold ${choice === scenarios[idx].is_safe ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600' : 'bg-red-500/10 border-red-500/20 text-red-500'}`}>
+                  {choice === scenarios[idx].is_safe ? "✓ Correct Answer!" : "✗ Incorrect Answer!"}
+                  <p className="text-xs text-foreground/80 font-normal mt-1 leading-relaxed">{scenarios[idx].explanation}</p>
+                </div>
+                <button onClick={() => setClues(prev => !prev)} className="text-xs font-bold text-primary underline">Toggle Clues</button>
+                {clues && (
+                  <div className="p-3 bg-muted rounded-xl space-y-1">
+                    {scenarios[idx].clues.map((c, i) => <p key={i} className="text-[10px] text-muted-foreground">• {c}</p>)}
+                  </div>
+                )}
+                <button onClick={handleNext} className="w-full bg-primary text-primary-foreground font-bold py-3 rounded-xl">Next Scenario</button>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // ---------------- 9. User Dashboard & Certificate printing ----------------
+    function DashboardView({ setView, user, progress, lang, t }) {
+      const [selectedCert, setSelectedCert] = useState(null);
+      const [quizActive, setQuizActive] = useState(false);
+      
+      const compCount = Object.values(progress).filter(p => p >= 100).length;
+
+      const certs = [];
+      if (progress[1] >= 100) certs.push({ id: 1, title: lang === 'ta' ? "ஸ்மார்ட்போன் அடிப்படைகள்" : "Smartphone Basics", uuid: "DLH-A1B9-4819" });
+      if (progress[3] >= 100) certs.push({ id: 3, title: lang === 'ta' ? "டிஜிட்டல் கட்டணங்கள்" : "Digital Payments", uuid: "DLH-A3D9-9230" });
+
+      if (quizActive) {
+        return <QuizWidget setView={setView} setQuizActive={setQuizActive} lang={lang} t={t} />;
+      }
+
+      return (
+        <div className="space-y-8">
+          <div className="bg-gradient-to-r from-violet-600 to-indigo-600 rounded-3xl p-6 text-primary-foreground shadow-lg flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+              <h2 className="text-2xl font-black">{t('welcome')}, {user?.username || 'Learner'}!</h2>
+              <p className="text-xs text-primary-foreground/80 mt-1">Review your completed courses, certificates, and scores.</p>
+            </div>
+            <div className="bg-white/10 border border-white/10 px-4 py-2.5 rounded-2xl flex items-center gap-2">
+              <span className="text-xs font-bold uppercase opacity-80">Streak:</span>
+              <span className="font-extrabold text-base">{user?.streak_count || 1} Days 🔥</span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="bg-card border border-border p-6 rounded-2xl shadow-sm text-center">
+              <h3 className="text-2xl font-black">{compCount} / 5</h3>
+              <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider mt-1">Modules Finished</p>
+            </div>
+            <div className="bg-card border border-border p-6 rounded-2xl shadow-sm text-center">
+              <h3 className="text-2xl font-black">{certs.length}</h3>
+              <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider mt-1">Certificates Earned</p>
+            </div>
+            <div className="bg-card border border-border p-6 rounded-2xl shadow-sm">
+              <button onClick={() => setQuizActive(true)} className="w-full bg-primary text-primary-foreground font-bold py-3.5 rounded-xl text-center shadow-md block">
+                Take Module Quiz
+              </button>
+            </div>
+          </div>
+
+          {/* Certificate listing */}
+          <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
+            <h3 className="font-bold text-lg mb-4">My Completion Certificates</h3>
+            {certs.length === 0 ? (
+              <div className="text-center py-8 border-2 border-dashed border-border rounded-xl">
+                <p className="text-xs text-muted-foreground max-w-xs mx-auto mb-4">Complete 100% of topics in a module, then take and pass the quiz to issue certificates.</p>
+                <button onClick={() => setView('#/courses')} className="bg-secondary px-4 py-2 rounded-lg text-xs font-bold hover:bg-muted border border-border">Browse Courses</button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {certs.map(c => (
+                  <div key={c.id} className="border border-border/80 rounded-xl p-4 flex justify-between items-center bg-muted/10 hover:border-primary/40 transition-colors">
+                    <div>
+                      <h4 className="font-bold text-sm">{c.title}</h4>
+                      <span className="text-[10px] text-muted-foreground uppercase mt-1 block">ID: {c.uuid}</span>
+                    </div>
+                    <button onClick={() => setSelectedCert(c)} className="bg-primary text-primary-foreground p-2 rounded-lg shrink-0">
+                      Download
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Certificate print preview modal */}
+          {selectedCert && (
+            <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+              <div className="bg-card max-w-2xl w-full border border-border rounded-2xl p-6 shadow-2xl relative">
+                <div className="flex justify-between items-center border-b border-border pb-3 mb-6 print:hidden">
+                  <span className="font-bold text-sm">Certificate Details</span>
+                  <div className="flex gap-2">
+                    <button onClick={() => window.print()} className="bg-secondary border text-xs px-3 py-1.5 rounded-lg hover:bg-muted font-bold">Print / PDF</button>
+                    <button onClick={() => setSelectedCert(null)} className="bg-muted text-xs px-3 py-1.5 rounded-lg font-bold">Close</button>
+                  </div>
+                </div>
+
+                <div id="certificate-print-area" className="border-8 border-double border-primary/45 p-8 text-center text-slate-800 bg-white rounded-xl relative min-h-[380px] flex flex-col justify-between">
+                  <div className="absolute top-2.5 left-2.5 w-8 h-8 border-t-2 border-l-2 border-primary/50"></div>
+                  <div className="absolute top-2.5 right-2.5 w-8 h-8 border-t-2 border-r-2 border-primary/50"></div>
+                  <div className="absolute bottom-2.5 left-2.5 w-8 h-8 border-b-2 border-l-2 border-primary/50"></div>
+                  <div className="absolute bottom-2.5 right-2.5 w-8 h-8 border-b-2 border-r-2 border-primary/50"></div>
+
+                  <div>
+                    <span className="text-[9px] uppercase font-bold text-primary tracking-widest">Certificate of Completion</span>
+                    <h3 className="text-xl font-bold font-serif text-slate-900 mt-2">DIGITAL LITERACY HUB</h3>
+                  </div>
+
+                  <div className="my-6">
+                    <p className="text-[10px] italic text-slate-500">This is awarded to</p>
+                    <h4 className="text-xl font-bold font-serif text-primary mt-1">{user?.username || 'Citizen'}</h4>
+                    <p className="text-[10px] text-slate-500 max-w-sm mx-auto mt-3">for achieving core digital operational competencies in</p>
+                    <h5 className="font-bold text-slate-900 mt-1 uppercase text-xs tracking-wider">{selectedCert.title}</h5>
+                  </div>
+
+                  <div className="flex justify-between items-end border-t border-slate-200 pt-4 mt-2">
+                    <div className="text-left text-[9px]">
+                      <span className="text-slate-400 block font-bold uppercase">Verification ID</span>
+                      <strong className="text-slate-800 font-mono">{selectedCert.uuid}</strong>
+                    </div>
+                    <div className="w-8 h-8 rounded-full border border-primary flex items-center justify-center bg-primary/5 text-primary text-[8px] font-black">SEAL</div>
+                    <div className="text-right text-[9px]">
+                      <span className="text-slate-400 block font-bold uppercase">Issued Date</span>
+                      <strong className="text-slate-800">{new Date().toLocaleDateString()}</strong>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // ---------------- 10. Quiz Widget ----------------
+    function QuizWidget({ setView, setQuizActive, lang, t }) {
+      const [submitted, setSubmitted] = useState(false);
+      const [answers, setAnswers] = useState({});
+      const [score, setScore] = useState(0);
+
+      const questions = [
+        {
+          id: 1,
+          question: lang === 'ta' ? "அழைப்பை மேற்கொள்ள எண்ணை தட்டச்சு செய்த பிறகு எந்த பொத்தானை அழுத்த வேண்டும்?" : "Which button do you press to make a phone call after entering a number?",
+          options: lang === 'ta' ? ["சிவப்பு பொத்தான்", "பச்சை பொத்தான்", "ஒலி பட்டன்", "பவர் பட்டன்"] : ["Red Button", "Green Button", "Volume Button", "Power Button"],
+          correct: 1,
+          explanation: "The green button represents dialing or receiving phone calls."
+        },
+        {
+          id: 2,
+          question: lang === 'ta' ? "வாட்ஸ்அப்பின் (WhatsApp) முதன்மை செயல்பாடு என்ன?" : "What is the primary function of WhatsApp?",
+          options: lang === 'ta' ? ["கேம் விளையாடுவது", "செய்திகள் அனுப்புவது மற்றும் வீடியோ கால்கள் செய்வது", "கணக்கீடு", "ரயில் முன்பதிவு"] : ["Playing games", "Sending messages & video calls", "Calculator", "Train ticket"],
+          correct: 1,
+          explanation: "WhatsApp is used to exchange free messages and calls with contacts."
+        }
+      ];
+
+      const handleSelect = (qId, oIdx) => {
+        if (submitted) return;
+        setAnswers(prev => ({ ...prev, [qId]: oIdx }));
+      };
+
+      const handleSubmit = () => {
+        if (Object.keys(answers).length < questions.length) {
+          alert("Answer all questions.");
+          return;
+        }
+
+        let correctCount = 0;
+        questions.forEach(q => {
+          if (answers[q.id] === q.correct) correctCount += 1;
+        });
+
+        const finalScore = (correctCount / questions.length) * 100;
+        setScore(finalScore);
+        setSubmitted(true);
+
+        if (finalScore >= 100) {
+          confetti({ particleCount: 150, spread: 80 });
+          // Force set course progress to completed
+          const savedProgress = JSON.parse(localStorage.getItem('dlh_modules_progress') || '{}');
+          savedProgress[1] = 100; // Smartphone
+          localStorage.setItem('dlh_modules_progress', JSON.stringify(savedProgress));
+        }
+      };
+
+      return (
+        <div className="max-w-xl mx-auto space-y-6">
+          <div className="flex justify-between items-center">
+            <h3 className="text-xl font-bold">Module 1 Quiz</h3>
+            <button onClick={() => setQuizActive(false)} className="text-xs font-bold text-muted-foreground hover:text-foreground">Exit</button>
+          </div>
+
+          <div className="space-y-6">
+            {questions.map((q, idx) => (
+              <div key={q.id} className="bg-card border border-border p-5 rounded-2xl shadow-sm space-y-4">
+                <h4 className="font-bold text-sm">{idx + 1}. {q.question}</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {q.options.map((opt, oIdx) => {
+                    const isSelected = answers[q.id] === oIdx;
+                    let style = "border border-border/80 bg-muted/20 text-left p-3 rounded-xl text-xs";
+                    if (isSelected) style = "border-primary bg-primary/10 text-primary font-bold text-left p-3 rounded-xl text-xs";
+
+                    if (submitted) {
+                      if (oIdx === q.correct) style = "border-emerald-500 bg-emerald-500/10 text-emerald-600 font-bold text-left p-3 rounded-xl text-xs";
+                      else if (isSelected) style = "border-red-500 bg-red-500/10 text-red-600 text-left p-3 rounded-xl text-xs";
+                      else style = "border-border/40 opacity-50 text-left p-3 rounded-xl text-xs";
+                    }
+
+                    return (
+                      <button disabled={submitted} key={oIdx} onClick={() => handleSelect(q.id, oIdx)} className={style}>
+                        {opt}
+                      </button>
+                    );
+                  })}
+                </div>
+                {submitted && <p className="text-[10px] text-muted-foreground leading-relaxed pt-2 border-t border-border">Explanation: {q.explanation}</p>}
+              </div>
+            ))}
+          </div>
+
+          {!submitted ? (
+            <button onClick={handleSubmit} className="w-full bg-primary text-primary-foreground font-bold py-3.5 rounded-xl shadow-md">
+              Submit Answers
+            </button>
+          ) : (
+            <div className="bg-card border border-border p-6 rounded-2xl text-center space-y-4">
+              <h4 className="text-lg font-black">{score >= 100 ? "✓ Passed!" : "✗ Failed!"}</h4>
+              <p className="text-xs text-muted-foreground">Score: {score}%. {score >= 100 ? "Certificate unlocked! Go back to dashboard to print." : "Minimum 80% required."}</p>
+              <button onClick={() => setQuizActive(false)} className="bg-primary text-primary-foreground font-bold px-6 py-2.5 rounded-xl text-xs">Return to Dashboard</button>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // ---------------- 11. Community Impact Dashboard ----------------
+    function ImpactView({ progress, lang, t }) {
+      return (
+        <div className="space-y-10">
+          <div>
+            <h2 className="text-3xl font-extrabold tracking-tight text-center md:text-left">{t('navImpact')}</h2>
+            <p className="text-sm text-muted-foreground mt-1 max-w-xl">Community reach, active regional participation rates, and cumulative certificates issued.</p>
+          </div>
+
+          {/* Core figures */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="bg-card border border-border p-6 rounded-2xl shadow-sm text-center">
+              <h4 className="text-2xl font-black">24,500+</h4>
+              <p className="text-[10px] uppercase font-bold text-muted-foreground mt-1">Total Trained</p>
+            </div>
+            <div className="bg-card border border-border p-6 rounded-2xl shadow-sm text-center">
+              <h4 className="text-2xl font-black">62,000+</h4>
+              <p className="text-[10px] uppercase font-bold text-muted-foreground mt-1">Modules Completed</p>
+            </div>
+            <div className="bg-card border border-border p-6 rounded-2xl shadow-sm text-center">
+              <h4 className="text-2xl font-black">18,400+</h4>
+              <p className="text-[10px] uppercase font-bold text-muted-foreground mt-1">Certificates Issued</p>
+            </div>
+            <div className="bg-card border border-border p-6 rounded-2xl shadow-sm text-center">
+              <h4 className="text-2xl font-black">84.5%</h4>
+              <p className="text-[10px] uppercase font-bold text-muted-foreground mt-1">Pass Ratio</p>
+            </div>
+          </div>
+
+          {/* Regional outreach statistics progress lines */}
+          <div className="bg-card border border-border rounded-2xl p-6 shadow-sm max-w-2xl mx-auto space-y-4">
+            <h3 className="font-bold text-lg mb-2">Outreach Growth state-wide</h3>
+            {[
+              { state: "Tamil Nadu", percentage: 50.6, count: 12400 },
+              { state: "Karnataka", percentage: 17.1, count: 4200 },
+              { state: "Andhra Pradesh", percentage: 12.6, count: 3100 },
+              { state: "Kerala", percentage: 9.1, count: 2200 }
+            ].map((item, idx) => (
+              <div key={idx} className="space-y-1">
+                <div className="flex justify-between text-xs font-semibold">
+                  <span>{item.state}</span>
+                  <span className="text-muted-foreground">{item.count.toLocaleString()} Citizens ({item.percentage}%)</span>
+                </div>
+                <div className="w-full bg-muted h-2 rounded-full overflow-hidden">
+                  <div className="bg-primary h-full rounded-full" style={{ width: `${item.percentage}%` }}></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    // ---------------- 12. Admin Dashboard ----------------
+    function AdminView({ setView, t }) {
+      const [courses, setCourses] = useState([
+        { id: 1, title: "Smartphone Basics", completions: 20, attempts: 40 },
+        { id: 2, title: "Internet Basics", completions: 5, attempts: 12 },
+        { id: 3, title: "Digital Payments", completions: 15, attempts: 25 }
+      ]);
+      const [title, setTitle] = useState('');
+      const [desc, setDesc] = useState('');
+
+      const handleAdd = (e) => {
+        e.preventDefault();
+        if (!title) return;
+        setCourses(prev => [...prev, { id: prev.length + 1, title, completions: 0, attempts: 0 }]);
+        setTitle('');
+        setDesc('');
+        alert("Course module created successfully!");
+      };
+
+      return (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 py-4">
+          <div className="lg:col-span-8 bg-card border border-border rounded-2xl p-6 shadow-sm space-y-4">
+            <h3 className="font-bold text-lg">Manage Courses</h3>
+            <table className="w-full text-left text-xs">
+              <thead className="bg-muted text-muted-foreground uppercase text-[9px] tracking-wider border-b border-border">
+                <tr>
+                  <th className="py-2.5 px-4 font-bold">Course Title</th>
+                  <th className="py-2.5 px-4 font-bold">Completions</th>
+                  <th className="py-2.5 px-4 font-bold">Attempts</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/60">
+                {courses.map(c => (
+                  <tr key={c.id}>
+                    <td className="py-3 px-4 font-semibold">{c.title}</td>
+                    <td className="py-3 px-4">{c.completions}</td>
+                    <td className="py-3 px-4">{c.attempts}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="lg:col-span-4 bg-card border border-border rounded-2xl p-6 shadow-sm space-y-4">
+            <h3 className="font-bold text-lg">Add Course Module</h3>
+            <form onSubmit={handleAdd} className="space-y-3">
+              <div>
+                <label className="block text-[10px] font-bold text-muted-foreground uppercase mb-1">Title</label>
+                <input type="text" required value={title} onChange={e => setTitle(e.target.value)} placeholder="e.g. Email usage" className="w-full bg-muted/40 border border-border rounded-lg px-3 py-2 text-xs text-foreground focus:outline-none focus:border-primary" />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold text-muted-foreground uppercase mb-1">Description</label>
+                <textarea rows="2" value={desc} onChange={e => setDesc(e.target.value)} placeholder="e.g. Learn to write emails..." className="w-full bg-muted/40 border border-border rounded-lg px-3 py-2 text-xs text-foreground focus:outline-none focus:border-primary" />
+              </div>
+              <button type="submit" className="w-full bg-primary text-primary-foreground font-bold py-2 rounded-lg text-xs">Create Module</button>
+            </form>
+          </div>
+        </div>
+      );
+    }
+
+    // ---------------- 13. Floating Chatbot Widget ----------------
+    function AIChatbotWidget({ lang, t }) {
+      const [open, setOpen] = useState(false);
+      const [messages, setMessages] = useState([
+        { sender: 'bot', text: lang === 'ta' ? "வணக்கம்! நான் உங்கள் AI உதவியாளர். ஸ்மார்ட்போன், UPI, இணையம் பற்றி ஏதேனும் கேட்கலாம்." : "Hello! I am your AI assistant. Ask me anything about using smartphones, internet, UPI payments, or cyber safety." }
+      ]);
+      const [text, setText] = useState('');
+      const chatEndRef = useRef(null);
+
+      const suggestions = lang === 'ta' ? [
+        "வாட்ஸ்அப் எவ்வாறு பயன்படுத்துவது?",
+        "UPI பின் (PIN) பாதுகாப்பானதா?",
+        "புதிய காண்டாக்ட் சேமிப்பது எப்படி?"
+      ] : [
+        "How to use WhatsApp?",
+        "Is UPI PIN safe?",
+        "How to save a contact?"
+      ];
+
+      useEffect(() => {
+        if (chatEndRef.current) chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
+      }, [messages, open]);
+
+      const handleSend = (sugText) => {
+        const query = sugText || text;
+        if (!query.trim()) return;
+
+        if (!sugText) setText('');
+        setMessages(prev => [...prev, { sender: 'user', text: query }]);
+
+        // Simple rules matching response simulation
+        setTimeout(() => {
+          let reply = "";
+          const lower = query.toLowerCase();
+
+          if (lang === 'ta') {
+            if (lower.includes("வாட்ஸ்அப்") || lower.includes("whatsapp")) {
+              reply = "வாட்ஸ்அப் பயன்படுத்த:\n1. செயலியைத் திறக்கவும்.\n2. சேட் குறியீட்டைத் தட்டி நண்பரைத் தேர்ந்தெடுக்கவும்.\n3. மெசேஜ் பெட்டியில் தட்டச்சு செய்து பச்சை அம்பு குறியை தட்டவும்.";
+            } else if (lower.includes("upi") || lower.includes("பின்") || lower.includes("பணம்")) {
+              reply = "UPI PIN என்பது வங்கி கணக்கு பாதுகாப்பு எண். பணம் அனுப்ப மட்டுமே PIN தேவை. பணம் பெற PIN தேவையில்லை. PIN-ஐ யாரிடமும் பகிரக் கூடாது.";
+            } else if (lower.includes("சேமி") || lower.includes("தொடர்பு")) {
+              reply = "தொடர்பைச் சேமிக்க:\n1. Contacts செயலியில் '+' குறியீட்டைத் தட்டவும்.\n2. பெயர் மற்றும் மொபைல் எண்ணை உள்ளிட்டு 'Save' செய்யவும்.";
+            } else {
+              reply = "ஸ்மார்ட்போன், இணைய பாதுகாப்பு, UPI மற்றும் டிஜிலாக்கர் பற்றி நீங்கள் என்னிடம் கேட்கலாம்.";
+            }
+          } else {
+            if (lower.includes("whatsapp") || lower.includes("message")) {
+              reply = "To use WhatsApp:\n1. Open WhatsApp.\n2. Tap Chat button and select contact.\n3. Type message and hit green send arrow.";
+            } else if (lower.includes("upi") || lower.includes("pin") || lower.includes("money")) {
+              reply = "UPI PIN is secret. Enter PIN *only* when sending money. Do NOT enter PIN to receive money. Never share your PIN.";
+            } else if (lower.includes("save") || lower.includes("contact")) {
+              reply = "To save a contact:\n1. Open Contacts and tap '+'.\n2. Enter name and phone number, then tap 'Save'.";
+            } else {
+              reply = "I can guide you about WhatsApp, Google search, UPI, secure payments, and government DigiLocker services.";
+            }
+          }
+
+          setMessages(prev => [...prev, { sender: 'bot', text: reply }]);
+        }, 600);
+      };
+
+      return (
+        <div className="fixed bottom-6 right-6 z-50">
+          {!open && (
+            <button onClick={() => setOpen(true)} className="bg-primary text-primary-foreground hover:bg-primary/95 p-4 rounded-full shadow-2xl flex items-center justify-center font-bold text-xl border-2 border-primary-foreground/15">
+              💬
+            </button>
+          )}
+
+          {open && (
+            <div className="bg-card w-80 sm:w-96 h-[480px] rounded-2xl shadow-2xl border border-border flex flex-col overflow-hidden animate-in slide-in-from-bottom-5">
+              {/* Header */}
+              <div className="bg-gradient-to-r from-primary to-violet-600 p-4 text-primary-foreground flex justify-between items-center">
+                <span className="font-bold text-sm flex items-center gap-1.5">🤖 AI Assistant Helper</span>
+                <button onClick={() => setOpen(false)} className="text-white hover:text-white/80 text-sm font-bold">✕</button>
+              </div>
+
+              {/* Message Feed */}
+              <div className="flex-grow p-4 overflow-y-auto space-y-3 bg-muted/10">
+                {messages.map((m, idx) => (
+                  <div key={idx} className={`flex ${m.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
+                    <div className={`p-3 rounded-2xl text-xs max-w-[80%] whitespace-pre-line ${m.sender === 'user' ? 'bg-primary text-primary-foreground rounded-tr-none' : 'bg-card text-foreground rounded-tl-none border border-border'}`}>
+                      {m.text}
+                    </div>
+                  </div>
+                ))}
+                <div ref={chatEndRef} />
+              </div>
+
+              {/* Suggestions */}
+              <div className="px-4 py-2 border-t bg-muted/5">
+                <p className="text-[9px] text-muted-foreground font-bold mb-1 uppercase">{t('quickQuestions')}</p>
+                <div className="flex flex-wrap gap-1">
+                  {suggestions.map((s, i) => (
+                    <button key={i} onClick={() => handleSend(s)} className="text-[10px] bg-card border border-border hover:border-primary px-2.5 py-1 rounded-full truncate text-left max-w-full">
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Chat Input form */}
+              <form onSubmit={e => { e.preventDefault(); handleSend(); }} className="p-3 border-t bg-card flex gap-2">
+                <input type="text" value={text} onChange={e => setText(e.target.value)} placeholder={t('askAI')} className="flex-grow bg-muted/40 border border-border rounded-xl px-3 py-1.5 text-xs text-foreground focus:outline-none" />
+                <button type="submit" className="bg-primary text-primary-foreground px-4 rounded-xl text-xs font-bold">Send</button>
+              </form>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // Mount to root DOM node
+    const container = document.getElementById('root');
+    const root = ReactDOM.createRoot(container);
+    root.render(<App />);
+  </script>
+</body>
+</html>
